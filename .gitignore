@@ -1,1 +1,3 @@
 /target
+/mem_handling/cmake-build-debug
+/mem_handling/cmake-build-release
