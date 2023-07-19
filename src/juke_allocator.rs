@@ -1,4 +1,5 @@
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::iter::Map;
 use spin::Mutex;
 use std::thread;
 use std::thread::ThreadId;
@@ -59,8 +60,10 @@ pub struct JukeAllocator {}
 
 impl JukeAllocator {
 	
-	
+
 	unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
+		
+		
 		
 		let np = layout.pad_to_align().size();
 		return if np < 256 {
