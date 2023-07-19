@@ -1,0 +1,2 @@
+C:\PROGRA~1\JETBRA~1\CLION2~3.3\bin\mingw\bin\ar.exe qc libmem_handling.a CMakeFiles/mem_handling.dir/mem_handler.c.obj CMakeFiles/mem_handling.dir/mem_pool_handler.c.obj CMakeFiles/mem_handling.dir/mem_block_handler.c.obj
+C:\PROGRA~1\JETBRA~1\CLION2~3.3\bin\mingw\bin\ranlib.exe libmem_handling.a
