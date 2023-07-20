@@ -11,6 +11,7 @@ extern "C" {
 	fn free(pointer: *mut u8);
 	fn mh_print_m();
 	fn init();
+	fn test();
 }
 
 pub fn print_mem() {
@@ -34,6 +35,12 @@ impl JukeGlobalAllocator {
 	pub fn init(&self) {
 		unsafe {
 			init();
+		}
+	}
+	
+	pub fn test(&self) {
+		unsafe {
+			test();
 		}
 	}
 }
@@ -62,7 +69,7 @@ impl JukeAllocator {
 	
 
 	unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
-		
+		return System.alloc(layout);
 		
 		
 		let np = layout.pad_to_align().size();
@@ -89,6 +96,9 @@ impl JukeAllocator {
 	}
 	
 	unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+		System.dealloc(ptr, layout);
+		return;
+		
 		let np = layout.pad_to_align().size();
 		if np<256 {
 			mh_free(ptr, np)

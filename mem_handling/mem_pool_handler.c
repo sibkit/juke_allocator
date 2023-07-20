@@ -11,56 +11,93 @@ MEM_POOL* mem_pool_handler_get_pools() {
     return mem_pools;
 }
 
- MEM_POOL* fill_new_pool(size_t size) {
-    MEM_POOL* new_pool = malloc(sizeof(MEM_POOL));
-    new_pool->next_pool=NULL;
-    new_pool->cell_size=size;
-    new_pool->first_block = NULL;
-    new_pool->last_block = NULL;
-    new_pool->released_cells_count = 0;
-    new_pool->blocks_count=0;
-    return new_pool;
+ void fill_new_pool(MEM_POOL* pool, size_t size) {
+    //MEM_POOL* new_pool = malloc(sizeof(MEM_POOL));
+     pool->cell_size=size;
+     pool->first_block = NULL;
+     pool->last_block = NULL;
+     pool->released_cells_count = 0;
+     pool->blocks_count=0;
 }
 
-MEM_POOL* get_pool_recursive(MEM_POOL* pool, size_t cell_size)
-{
-    if(pool == NULL) {
-        printf("allocator.c get_pool_recursive");
-        return NULL;
-    }
-
-    if(pool->cell_size == cell_size)
-        return pool;
-
-    if(pool->next_pool == NULL) {
-        MEM_POOL* new_pool = malloc(sizeof (MEM_POOL));
-        fill_new_pool(cell_size);
-        pool->next_pool = new_pool;
-        return new_pool;
-    }
-    else
-        return get_pool_recursive(pool->next_pool, cell_size);
-}
+typedef struct SIZE_POOL_ADDR {
+    size_t size;
+    MEM_POOL* pool_addr;
+} SIZE_POOL_ADDR;
 
 MEM_POOL* mem_pool_handler_get_pool(size_t cell_size)
 {
+    /**В идеале должны задаваться при инициализации, надо будет переделать
+     */
     if (mem_pools == NULL)
     {
-        mem_pools = calloc(16, sizeof(MEM_POOL));
-        for (int i = 1; i <= 16; i++)
-            fill_new_pool(i);
+        mem_pools = calloc(20, sizeof(MEM_POOL));
+
+        fill_new_pool(mem_pools,1);
+        fill_new_pool(mem_pools+1,2);
+        fill_new_pool(mem_pools+2,4);
+        fill_new_pool(mem_pools+3,8);
+        fill_new_pool(mem_pools+4,16);
+        fill_new_pool(mem_pools+5,32);
+        fill_new_pool(mem_pools+6,48);
+        fill_new_pool(mem_pools+7,64);
+        fill_new_pool(mem_pools+8,80);
+        fill_new_pool(mem_pools+9,96);
+        fill_new_pool(mem_pools+10,112);
+        fill_new_pool(mem_pools+11,128);
+        fill_new_pool(mem_pools+12,144);
+        fill_new_pool(mem_pools+13,160);
+        fill_new_pool(mem_pools+14,176);
+        fill_new_pool(mem_pools+15,192);
+        fill_new_pool(mem_pools+16,208);
+        fill_new_pool(mem_pools+17,224);
+        fill_new_pool(mem_pools+18,240);
+        fill_new_pool(mem_pools+19,256);
     }
 
-    //u32 tableRow = cell_size % 16;
-    MEM_POOL *first_line = mem_pools + ((cell_size - 1) % 16);//линии с нулевым размером быть не может
-
-    if (first_line->cell_size == cell_size)
-        return first_line;
-    else
-    {
-        MEM_POOL* result = get_pool_recursive(first_line, cell_size);
-        return result;
+    int index = 0;
+    if (cell_size>=16) {
+        if (cell_size%16!=0) {
+            return NULL;
+        } else {
+            index = 3 + cell_size/16;
+        }
+    } else {
+        switch (cell_size) {
+            case 0:
+                return NULL;
+            case 1:
+                index=0;
+                break;
+            case 2:
+                index=1;
+                break;
+            case 3:
+                return NULL;
+            case 4:
+                index=2;
+                break;
+            case 5:
+            case 6:
+            case 7:
+                return NULL;
+            case 8:
+                index=3;
+                break;
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
+            case 15:
+                return NULL;
+            default:
+                printf("ERROR: mem_pool_handler_get_pool(1)\n");
+        }
     }
+
+    return mem_pools+index;
 }
 
 MEM_BLOCK* find_block_with_released_cells(MEM_BLOCK* block)
@@ -78,18 +115,21 @@ MEM_BLOCK* find_block_with_released_cells(MEM_BLOCK* block)
 MEM_BLOCK* find_block(void* cell, MEM_POOL* pool, size_t start, size_t end) {
     return NULL;
     size_t middle = end-start;
-    void* mid_addr = pool->block_addresses+middle;
+    void* mid_addr = pool->blocks_addresses + middle;
     //if(mid_addr
-    //size_t middle = (size_t) (pool->block_addresses + end/2);
+    //size_t middle = (size_t) (pool->blocks_addresses + end/2);
 }
 
-MEM_BLOCK* mem_pool_handler_get_block_by_cell(void* cell, size_t size) {
+MEM_BLOCK* mph_get_block_by_cell(void* cell, size_t size) {
     MEM_POOL* pool = mem_pool_handler_get_pool(size);
     return find_block(cell, pool, 0, pool->blocks_count);
 }
 
-void* mem_pool_handler_get_free_cell_in_pool(MEM_POOL* pool)
+
+
+void* mph_get_free_cell_in_pool(MEM_POOL* pool)
 {
+
     //Проверяем есть ли блоки в пуле (если нет, то создаем и возвращаем первую ячейку)
     if (pool->first_block == NULL)
     {
@@ -104,8 +144,6 @@ void* mem_pool_handler_get_free_cell_in_pool(MEM_POOL* pool)
     if(pool->released_cells_count > 0)
     {
         MEM_BLOCK* block = find_block_with_released_cells(pool->last_block);
-        //u16 free_index = block->cur_released_cell_index;
-
         u8* byte_cells = (u8*)block->cells;
         u16 released_cell_index = *(block->released_cell_indexes + block->cur_released_cell_index);
 
@@ -134,11 +172,10 @@ void* mem_pool_handler_get_free_cell_in_pool(MEM_POOL* pool)
     }
 }
 
-void* mem_pool_handler_get_free_cell(size_t size) {
+void* mph_get_free_cell(size_t size) {
     MEM_POOL* pool = mem_pool_handler_get_pool(size);
-    if(pool->cell_size!=size) {
-        printf("ERROR: mem_pool_handler_get_free_cell(1)");
-    }
-    return mem_pool_handler_get_free_cell_in_pool(pool);
+    if(pool==NULL)
+        return NULL;
+    return mph_get_free_cell_in_pool(pool);
 }
 

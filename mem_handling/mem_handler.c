@@ -13,7 +13,7 @@ void init() {
 }
 
 u8* mh_malloc(size_t size) {
-    u8 *result = mem_pool_handler_get_free_cell(size);
+    u8 *result = mph_get_free_cell(size);
     if (result == NULL) {
         printf("mh_malloc: get_free_cell returns NULL\n");
     }
@@ -23,13 +23,13 @@ u8* mh_malloc(size_t size) {
 bool check_cell(u8* cell, size_t size) {
     if(size > MAX_CELL_SIZE)
         return true;
-    MEM_BLOCK* block = mem_pool_handler_get_block_by_cell(cell, size);
+    MEM_BLOCK* block = mph_get_block_by_cell(cell, size);
     return block->pool->cell_size == size;
 }
 
 void mh_free(u8* cell, size_t size)
 {
-    MEM_BLOCK* block = mem_pool_handler_get_block_by_cell(cell, size);
+    MEM_BLOCK* block = mph_get_block_by_cell(cell, size);
 
     if(block!=NULL)
     {

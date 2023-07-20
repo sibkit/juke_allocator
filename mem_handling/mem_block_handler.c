@@ -17,6 +17,8 @@ size_t mem_block_handler_calculate_block_size(size_t cell_size)
     return sizeof(struct MEM_BLOCK) + MEM_BLOCK_CELLS_COUNT * sizeof(u16);
 }*/
 
+
+
 MEM_BLOCK* mem_block_handler_create_block(MEM_POOL* pool)
 {
     MEM_BLOCK* block = malloc(sizeof(struct MEM_BLOCK) + MEM_BLOCK_CELLS_COUNT * sizeof(u16));
@@ -32,8 +34,8 @@ MEM_BLOCK* mem_block_handler_create_block(MEM_POOL* pool)
     pool->last_block = block;
     pool->blocks_count++;
 
-    pool->block_addresses = realloc(pool->block_addresses, sizeof(MEM_BLOCK *)*pool->blocks_count);// malloc(sizeof(MEM_BLOCK *)*mem_pools->blocks_count );
-    *(pool->block_addresses+pool->blocks_count) = (size_t) block;
+    pool->blocks_addresses = realloc(pool->blocks_addresses, sizeof(MEM_BLOCK *) * pool->blocks_count);// malloc(sizeof(MEM_BLOCK *)*mem_pools->blocks_count );
+    *(pool->blocks_addresses + pool->blocks_count) = (size_t) block;
 
     block->prev_block = pool->last_block;
     pool->last_block->next_block = block;

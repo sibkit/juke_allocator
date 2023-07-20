@@ -39,6 +39,7 @@ fn main() {
    //print_mem();
    //test_addresses();
    
+   ALLOCATOR.test();
    
    let start = SystemTime::now();
    test_tree();
