@@ -7,23 +7,99 @@
 
 MEM_POOL* mem_pools = NULL;
 
+int cmp_blocks(const void* a, const void* b)
+{
+    MEM_BLOCK* b_a = *(MEM_BLOCK**)a;
+    MEM_BLOCK* b_b = *(MEM_BLOCK**)b;
+    if (b_a->cells < b_b->cells) return -1;
+    if (b_b->cells < b_a->cells) return 1;
+    return 0;
+}
+
+void check_(MEM_POOL* pool) {
+
+    for(int i=0; i< pool->blocks_count;i++) {
+        MEM_BLOCK* block = *(pool->blocks_addresses+i);
+        if(block->pool!=pool) {
+            printf("ERROR: POOL BLOCKS ADDRESSES IS INCORRECT");
+        }
+        if(block->cur_released_cell_index>block->cur_cell_index) {
+            printf("ERROR: BLOCKS INDEXES IS INCORRECT");
+        }
+    }
+}
+
+MEM_BLOCK* mbh_create_block(MEM_POOL* pool) {
+
+    MEM_BLOCK *block = malloc(sizeof(struct MEM_BLOCK) + MEM_BLOCK_CELLS_COUNT * sizeof(u16));
+
+    block->pool = pool;
+    block->cur_cell_index = 0;
+    block->cur_released_cell_index = 0;
+    block->released_cell_indexes = (u16*) (block + 1); //индексы освобожденных ячеек начинаются сразу после блока
+    block->cells = malloc(MEM_BLOCK_CELLS_COUNT * pool->cell_size);
+
+    pool->blocks_count++;
+
+    pool->blocks_addresses = realloc(pool->blocks_addresses, sizeof(MEM_BLOCK**) * pool->blocks_count);
+    *(pool->blocks_addresses + pool->blocks_count - 1) = block;
+    qsort(pool->blocks_addresses, pool->blocks_count, sizeof(void *),cmp_blocks);
+
+    return block;
+}
+
+
+
+void mem_block_handler_delete_block(MEM_BLOCK* block)
+{
+    MEM_POOL* pool = block->pool;
+
+    pool->blocks_count--;
+
+    if(pool->blocks_count==0) {
+        free(pool->blocks_addresses);
+        pool->blocks_addresses = NULL;
+        pool->released_cells_count =0;
+    } else {
+        pool->released_cells_count = pool->released_cells_count-block->cur_released_cell_index;
+        MEM_BLOCK** new_blocks_addresses = malloc(sizeof (MEM_BLOCK**) * pool->blocks_count);
+
+        for (int i = 0; i < pool->blocks_count + 1; i++) {
+
+            if ( *(pool->blocks_addresses + i) < block) {
+                *(new_blocks_addresses + i) = *(pool->blocks_addresses + i);
+            } else
+                if ( *(pool->blocks_addresses + i) > block) {
+                *(new_blocks_addresses + i-1) = *(pool->blocks_addresses + i);
+            }
+        }
+        //MEM_BLOCK** temp = pool->blocks_addresses;
+        free(pool->blocks_addresses);
+        pool->blocks_addresses = new_blocks_addresses;
+
+    }
+    free(block->cells);
+    free(block);
+
+}
+
+
+
+
 MEM_POOL* mem_pool_handler_get_pools() {
     return mem_pools;
 }
 
  void fill_new_pool(MEM_POOL* pool, size_t size) {
-    //MEM_POOL* new_pool = malloc(sizeof(MEM_POOL));
      pool->cell_size=size;
-     pool->first_block = NULL;
-     pool->last_block = NULL;
      pool->released_cells_count = 0;
      pool->blocks_count=0;
 }
 
-typedef struct SIZE_POOL_ADDR {
-    size_t size;
-    MEM_POOL* pool_addr;
-} SIZE_POOL_ADDR;
+MEM_BLOCK* get_block_by_index(int index, MEM_POOL* pool) {
+
+    return (MEM_BLOCK *) *(pool->blocks_addresses + index);
+}
 
 MEM_POOL* mem_pool_handler_get_pool(size_t cell_size)
 {
@@ -100,80 +176,74 @@ MEM_POOL* mem_pool_handler_get_pool(size_t cell_size)
     return mem_pools+index;
 }
 
-MEM_BLOCK* find_block_with_released_cells(MEM_BLOCK* block)
-{
-    if(block==NULL)
-        return NULL;
-
-    if(block->cur_released_cell_index > 0)
-        return block;
-
-    return find_block_with_released_cells(block->prev_block);
-}
-
-
 MEM_BLOCK* find_block(void* cell, MEM_POOL* pool, size_t start, size_t end) {
-    return NULL;
-    size_t middle = end-start;
-    void* mid_addr = pool->blocks_addresses + middle;
-    //if(mid_addr
-    //size_t middle = (size_t) (pool->blocks_addresses + end/2);
+
+    size_t middle = start + (end-start)/2;
+    MEM_BLOCK* mid_block = get_block_by_index(middle, pool);
+    if(cell >= mid_block -> cells && cell < mid_block -> cells + (MEM_BLOCK_CELLS_COUNT) * pool->cell_size)
+        return mid_block;
+    else {
+        if(cell<mid_block->cells)
+            return find_block(cell,pool,start,middle-1);
+        else
+            return find_block(cell, pool, middle+1, end);
+    }
 }
 
 MEM_BLOCK* mph_get_block_by_cell(void* cell, size_t size) {
     MEM_POOL* pool = mem_pool_handler_get_pool(size);
-    return find_block(cell, pool, 0, pool->blocks_count);
+    return find_block(cell, pool, 0, pool->blocks_count-1);
 }
-
-
 
 void* mph_get_free_cell_in_pool(MEM_POOL* pool)
 {
-
-    //Проверяем есть ли блоки в пуле (если нет, то создаем и возвращаем первую ячейку)
-    if (pool->first_block == NULL)
-    {
-        pool->first_block = mem_block_handler_create_block(pool);
-        pool->first_block->cur_cell_index++;
-        //printf("fc1 0x%x\n",pool->first_block->cells);
-        return pool->first_block->cells;
+    if(pool->blocks_count == 0) {
+        MEM_BLOCK* block = mbh_create_block(pool);
+        block->cur_cell_index++;
+        return block->cells;
     }
+
     //Проверяем наличие освобожденных ячеек, если есть
     //ищем, начиная с последнего, блок с освобожденной ячейкой
     //возвращаем адрес последней освобожденной ячейки, уменьшаем индекс освободившихся ячеек.
     if(pool->released_cells_count > 0)
     {
-        MEM_BLOCK* block = find_block_with_released_cells(pool->last_block);
-        u8* byte_cells = (u8*)block->cells;
-        u16 released_cell_index = *(block->released_cell_indexes + block->cur_released_cell_index);
-
-        block->cur_released_cell_index--;
-        pool->released_cells_count--;
-        //printf("fc2 0x%x\n",byte_cells + pool->cell_size * released_cell_index);
-        return byte_cells + (pool->cell_size * released_cell_index);
+        for(int i = 0;i <pool->blocks_count;i++)
+        {
+            MEM_BLOCK* block = (MEM_BLOCK *) *(pool->blocks_addresses + i);
+            if(block->cur_released_cell_index>0)
+            {
+                u16 released_cell_index = *(block->released_cell_indexes + block->cur_released_cell_index);
+                block->cur_released_cell_index--;
+                pool->released_cells_count--;
+                return block->cells + (pool->cell_size * released_cell_index);
+            }
+        }
+        printf("ERROR: mph_get_free_cell_in_pool");
+        return NULL;
     }
     else
     {
-        MEM_BLOCK* last_block = pool->last_block;
-        //Проверяем последний блок на наличие свободных ячеек, если есть - пишем в него, если нет - создаем новый блок
-        if(last_block->cur_cell_index<MEM_BLOCK_CELLS_COUNT-1)
+        for(int i = pool->blocks_count-1; i >=0; i--)
         {
-            u8* cells = (u8*)last_block->cells;
-            cells+=(pool->cell_size * last_block->cur_cell_index);
-            last_block->cur_cell_index++;
-            return cells;
+            MEM_BLOCK* block = (MEM_BLOCK *) *(pool->blocks_addresses + i);
+            if(block->cur_cell_index<MEM_BLOCK_CELLS_COUNT-1)
+            {
+                u8* cell = (u8*)block->cells;
+                cell+=(pool->cell_size * block->cur_cell_index);
+                block->cur_cell_index++;
+                return cell;
+            }
         }
-        else
-        {
-            MEM_BLOCK* new_block = mem_block_handler_create_block(pool);
-            new_block->cur_cell_index++;
-            return new_block->cells;
-        }
+        MEM_BLOCK* new_block = mbh_create_block(pool);
+        new_block->cur_cell_index++;
+        return new_block->cells;
     }
 }
 
-void* mph_get_free_cell(size_t size) {
+void* mph_get_new_cell(size_t size) {
     MEM_POOL* pool = mem_pool_handler_get_pool(size);
+
     if(pool==NULL)
         return NULL;
     return mph_get_free_cell_in_pool(pool);

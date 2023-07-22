@@ -47,15 +47,7 @@ impl JukeGlobalAllocator {
 
 unsafe impl GlobalAlloc for JukeGlobalAllocator {
 	unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-		self.simple_allocator.lock().alloc(layout)/*
-		
-		let np = layout.pad_to_align().size();
-		if np < 256 {
-			mh_malloc(np)
-		} else {
-			System.alloc(layout)
-		}
-*/
+		self.simple_allocator.lock().alloc(layout)
 	}
 	
 	unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -65,16 +57,29 @@ unsafe impl GlobalAlloc for JukeGlobalAllocator {
 
 pub struct JukeAllocator {}
 
+#[inline]
+fn correct_size(size: usize) -> usize {
+	return  match size {
+		1 => 1,
+		2 => 2,
+		3..=4 => 4,
+		5..=8 => 8,
+		9..=16 =>16,
+		s => {
+			if s%16>0 {16*(1 + s/16)}
+			else { s }
+		}
+	};
+}
+
 impl JukeAllocator {
 	
 
 	unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
-		return System.alloc(layout);
+		let size = correct_size(layout.size());
 		
-		
-		let np = layout.pad_to_align().size();
-		return if np < 256 {
-			mh_malloc(np)
+		return if size <= 256 {
+			mh_malloc(size)
 		} else {
 			System.alloc(layout)
 		};
@@ -96,12 +101,12 @@ impl JukeAllocator {
 	}
 	
 	unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
-		System.dealloc(ptr, layout);
-		return;
+		//System.dealloc(ptr, layout);
+		//return;
 		
-		let np = layout.pad_to_align().size();
-		if np<256 {
-			mh_free(ptr, np)
+		let size = correct_size(layout.size());
+		if size <= 256 {
+			mh_free(ptr, size)
 		} else {
 			System.dealloc(ptr,layout)
 		}

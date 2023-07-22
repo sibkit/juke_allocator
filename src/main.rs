@@ -38,7 +38,7 @@ fn main() {
    //ALLOCATOR.init();
    //print_mem();
    //test_addresses();
-   
+   ALLOCATOR.init();
    ALLOCATOR.test();
    
    let start = SystemTime::now();

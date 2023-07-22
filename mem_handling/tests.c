@@ -1,4 +1,3 @@
-#pragma once
 
 #include <stdio.h>
 #include "mem_pool_handler.h"
@@ -21,37 +20,58 @@ bool is_correct_cell_size(size_t cell_size) {
     return false;
 }
 
-void test_mph_get_pool() {
-    printf("TEST MPH get_pool()......");
-
+void test_fill_and_clear_pool() {
+    printf("TEST fill_and_clear_pool..");
     bool test_ok = true;
-    for(int i=0;i<256;i++){
-        MEM_POOL* pool = mem_pool_handler_get_pool(i);
+    MEM_POOL* pool = mem_pool_handler_get_pool(16);
+    int cells_count = 4*MEM_BLOCK_CELLS_COUNT;
+    u8** arr = malloc(16*cells_count);
+    for(int i=0;i<cells_count;i++) {
+        *(arr+i) = (u8*) mh_malloc(16);
+    }
+
+    for(int i=cells_count-1;i>=0;i--) {
+        mh_free(*(arr+i) , 16);
+    }
+
+    if(pool->blocks_count!=0)
+        test_ok = false;
+
+    if (test_ok)
+        printf("OK\n");
+    else
+        printf("FAILED\n");
+}
+
+void test_mph_get_pool() {
+    printf("TEST MPH get_pool().......");
+    bool test_ok = true;
+
+    for (int i = 0; i < 256; i++) {
+        MEM_POOL *pool = mem_pool_handler_get_pool(i);
         bool correct_size = is_correct_cell_size(i);
-        if(correct_size) {
-            if(pool==NULL || pool->cell_size!=i) {
+        if (correct_size) {
+            if (pool == NULL || pool->cell_size != i) {
                 test_ok = false;
                 printf("(%i))", i);
             }
-        }
-        else
-        {
-            if(pool!=NULL)
-            {
+        } else {
+            if (pool != NULL) {
                 test_ok = false;
                 printf("(%i))", i);
             }
         }
     }
-    if(test_ok)
+    if (test_ok)
         printf("OK\n");
     else
         printf("FAILED\n");
 }
 
 void test() {
+    test_fill_and_clear_pool();
     test_mph_get_pool();
-
+/*
     printf("test struct size: %i\n", sizeof(TEST_STRUCT));
     for(int i=0;i<256;i++){
         MEM_POOL* pool = mem_pool_handler_get_pool(i);
@@ -62,7 +82,7 @@ void test() {
         }
         printf("\n");
     }
-
+*/
 
 }
 

@@ -10,9 +10,5 @@
 
 u8* mh_malloc(size_t size);
 void mh_free(u8* cell, size_t size);
-
-bool check_cell(u8* cell, size_t size);
-
 void init();
-
 void test();
