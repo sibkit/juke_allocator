@@ -17,25 +17,50 @@ int cmp_blocks(const void* a, const void* b)
 }
 
 void check_(MEM_POOL* pool) {
-
-    for(int i=0; i< pool->blocks_count;i++) {
-        MEM_BLOCK* block = *(pool->blocks_addresses+i);
-        if(block->pool!=pool) {
-            printf("ERROR: POOL BLOCKS ADDRESSES IS INCORRECT");
+/*
+    for (int i = 0; i < pool->blocks_count; i++) {
+        MEM_BLOCK *block = *(pool->blocks_addresses + i);
+        if (block->pool != pool) {
+            printf("ERROR: POOL BLOCKS ADDRESSES IS INCORRECT\n");
         }
-        if(block->cur_released_cell_index>block->cur_cell_index) {
-            printf("ERROR: BLOCKS INDEXES IS INCORRECT");
+        if (block->released_cells_count > block->cells_count) {
+            printf("ERROR: BLOCKS INDEXES IS INCORRECT\n");
+        }
+        if (block->released_cells_count >= block->cells_count && block->cells_count > 0) {
+            printf("ERROR: CELLS COUNT IS INCORRECT\n");
+        }
+        for (int j = 0; j < pool->blocks_count; j++) {
+            if (i != j) {
+                MEM_BLOCK* j_block = *(pool->blocks_addresses + j);
+                if(j_block->cells==block->cells) {
+                    printf("ERROR: CELLS ADDRESSES IS DOUBLED\n");
+                }
+            }
         }
     }
+
+    if(pool->blocks_count>0) {
+        u8* cell_addr = (*(pool->blocks_addresses))->cells;
+
+        for (int i = 0; i < pool->blocks_count; i++) {
+            MEM_BLOCK *block = *(pool->blocks_addresses + i);
+            if(block->cells < cell_addr) {
+                printf("ERROR: BLOCKS SORT CORRUPT\n");
+            }
+        }
+    }
+*/
 }
 
 MEM_BLOCK* mbh_create_block(MEM_POOL* pool) {
 
+    check_(pool);
+
     MEM_BLOCK *block = malloc(sizeof(struct MEM_BLOCK) + MEM_BLOCK_CELLS_COUNT * sizeof(u16));
 
     block->pool = pool;
-    block->cur_cell_index = 0;
-    block->cur_released_cell_index = 0;
+    block->cells_count = 0;
+    block->released_cells_count = 0;
     block->released_cell_indexes = (u16*) (block + 1); //индексы освобожденных ячеек начинаются сразу после блока
     block->cells = malloc(MEM_BLOCK_CELLS_COUNT * pool->cell_size);
 
@@ -44,6 +69,8 @@ MEM_BLOCK* mbh_create_block(MEM_POOL* pool) {
     pool->blocks_addresses = realloc(pool->blocks_addresses, sizeof(MEM_BLOCK**) * pool->blocks_count);
     *(pool->blocks_addresses + pool->blocks_count - 1) = block;
     qsort(pool->blocks_addresses, pool->blocks_count, sizeof(void *),cmp_blocks);
+
+    check_(pool);
 
     return block;
 }
@@ -54,33 +81,38 @@ void mem_block_handler_delete_block(MEM_BLOCK* block)
 {
     MEM_POOL* pool = block->pool;
 
-    pool->blocks_count--;
+    check_(pool);
 
-    if(pool->blocks_count==0) {
+    if(pool->blocks_count==1) {
         free(pool->blocks_addresses);
         pool->blocks_addresses = NULL;
         pool->released_cells_count =0;
+        pool->blocks_count=0;
+        check_(pool);
     } else {
-        pool->released_cells_count = pool->released_cells_count-block->cur_released_cell_index;
-        MEM_BLOCK** new_blocks_addresses = malloc(sizeof (MEM_BLOCK**) * pool->blocks_count);
+        check_(pool);
+        pool->released_cells_count = pool->released_cells_count - block->released_cells_count;
+        MEM_BLOCK** new_blocks_addresses = malloc(sizeof (MEM_BLOCK**) * pool->blocks_count-1);
 
-        for (int i = 0; i < pool->blocks_count + 1; i++) {
+        for (int i = 0; i < pool->blocks_count; i++) {
 
-            if ( *(pool->blocks_addresses + i) < block) {
+            if ( (*(pool->blocks_addresses + i))->cells < block->cells) {
                 *(new_blocks_addresses + i) = *(pool->blocks_addresses + i);
             } else
-                if ( *(pool->blocks_addresses + i) > block) {
-                *(new_blocks_addresses + i-1) = *(pool->blocks_addresses + i);
+                if ( (*(pool->blocks_addresses + i))->cells > block->cells) {
+                *(new_blocks_addresses + (i - 1)) = *(pool->blocks_addresses + i);
             }
         }
+        pool->blocks_count--;
         //MEM_BLOCK** temp = pool->blocks_addresses;
         free(pool->blocks_addresses);
         pool->blocks_addresses = new_blocks_addresses;
+        check_(pool);
 
     }
     free(block->cells);
     free(block);
-
+    check_(pool);
 }
 
 
@@ -177,29 +209,38 @@ MEM_POOL* mem_pool_handler_get_pool(size_t cell_size)
 }
 
 MEM_BLOCK* find_block(void* cell, MEM_POOL* pool, size_t start, size_t end) {
-
+    check_(pool);
     size_t middle = start + (end-start)/2;
     MEM_BLOCK* mid_block = get_block_by_index(middle, pool);
-    if(cell >= mid_block -> cells && cell < mid_block -> cells + (MEM_BLOCK_CELLS_COUNT) * pool->cell_size)
+    if(cell >= mid_block -> cells && cell < mid_block -> cells + (MEM_BLOCK_CELLS_COUNT) * pool->cell_size) {
+        check_(mid_block->pool);
         return mid_block;
+    }
+
     else {
         if(cell<mid_block->cells)
             return find_block(cell,pool,start,middle-1);
         else
             return find_block(cell, pool, middle+1, end);
     }
+    check_(pool);
 }
 
 MEM_BLOCK* mph_get_block_by_cell(void* cell, size_t size) {
     MEM_POOL* pool = mem_pool_handler_get_pool(size);
+    check_(pool);
+
+
+
     return find_block(cell, pool, 0, pool->blocks_count-1);
 }
 
 void* mph_get_free_cell_in_pool(MEM_POOL* pool)
 {
+    check_(pool);
     if(pool->blocks_count == 0) {
         MEM_BLOCK* block = mbh_create_block(pool);
-        block->cur_cell_index++;
+        block->cells_count++;
         return block->cells;
     }
 
@@ -211,32 +252,31 @@ void* mph_get_free_cell_in_pool(MEM_POOL* pool)
         for(int i = 0;i <pool->blocks_count;i++)
         {
             MEM_BLOCK* block = (MEM_BLOCK *) *(pool->blocks_addresses + i);
-            if(block->cur_released_cell_index>0)
+            if(block->released_cells_count > 0)
             {
-                u16 released_cell_index = *(block->released_cell_indexes + block->cur_released_cell_index);
-                block->cur_released_cell_index--;
+                u16 released_cell_index = *(block->released_cell_indexes + block->released_cells_count-1);
+                block->released_cells_count--;
                 pool->released_cells_count--;
                 return block->cells + (pool->cell_size * released_cell_index);
             }
         }
         printf("ERROR: mph_get_free_cell_in_pool");
+        check_(pool);
         return NULL;
     }
     else
     {
-        for(int i = pool->blocks_count-1; i >=0; i--)
-        {
-            MEM_BLOCK* block = (MEM_BLOCK *) *(pool->blocks_addresses + i);
-            if(block->cur_cell_index<MEM_BLOCK_CELLS_COUNT-1)
-            {
-                u8* cell = (u8*)block->cells;
-                cell+=(pool->cell_size * block->cur_cell_index);
-                block->cur_cell_index++;
-                return cell;
+        for(int i = pool->blocks_count-1; i >=0; i--) {
+            MEM_BLOCK *block = (MEM_BLOCK *) *(pool->blocks_addresses + i);
+            if (block->cells_count < MEM_BLOCK_CELLS_COUNT) {
+                block->cells_count++;
+                check_(pool);
+                return block->cells + pool->cell_size * (block->cells_count - 1);
             }
         }
         MEM_BLOCK* new_block = mbh_create_block(pool);
-        new_block->cur_cell_index++;
+        new_block->cells_count++;
+        check_(pool);
         return new_block->cells;
     }
 }

@@ -22,19 +22,24 @@ u8* mh_malloc(size_t size) {
 void mh_free(u8* cell, size_t size)
 {
     MEM_BLOCK* block = mph_get_block_by_cell(cell, size);
+    MEM_POOL* pool = block->pool;
     if(block!=NULL) {
+        check_(pool);
+
+
+
         /*
          Проверяем имеет ли текущий индекс записи индекс освобождаемой ячейки, если да - уменьшаем значение индекса записи на 1;
          Если нет, добавляем индекс свободной ячейки в released_cell_indexes
-         Если cur_released_cell_index ==cur_cell_index-1 (освобожденных ячеек столько же, сколько всего) удаляем MEM_BLOCK
+         Если released_cells_count ==cells_count-1 (освобожденных ячеек столько же, сколько всего) удаляем MEM_BLOCK
          */
-        /*
 
-        if (block->cur_cell_index == block->cur_released_cell_index + 1) {
+
+        if (block->cells_count -1 == block->released_cells_count) {
             mem_block_handler_delete_block(block);
             return;
         }
-        */
+
 
 
         u16 cell_index = (cell - (u8 *) block->cells) / size;
@@ -43,22 +48,23 @@ void mh_free(u8* cell, size_t size)
             printf("ERROR: mh_free (----)\n");
         }
 
-        if(cell_index>block->cur_cell_index-1) {
-            printf("ERROR: mh_free (released index > cur_cell_index) %p, %i\n", cell,*cell);
+        if(cell_index> block->cells_count - 1) {
+            printf("ERROR: mh_free (released index > cells_count) %p, %i\n", cell,*cell);
+            return;
         }
 
         //если освобождаемая ячейка последняя записанная - уменьшаем индекс записи
-        if (block->cur_cell_index - 1 == cell_index) {
-            block->cur_cell_index--;
-            if (block->cur_cell_index == 0) {
+        if (block->cells_count-1 == cell_index) {
+            block->cells_count--;
+            if (block->cells_count == 0) {
                 mem_block_handler_delete_block(block);
             }
         } else {
-            *(block->released_cell_indexes + block->cur_released_cell_index) = cell_index;
-            block->cur_released_cell_index++;
+            *(block->released_cell_indexes + block->released_cells_count) = cell_index;
+            block->released_cells_count++;
             block->pool->released_cells_count++;
         }
-
+        check_(pool);
     }
     else
         printf("ERROR: mh_free (block not found)\n");

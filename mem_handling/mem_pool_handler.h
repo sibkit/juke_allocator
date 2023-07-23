@@ -6,7 +6,7 @@
 
 #include "mem_handler.h"
 
-#define MEM_BLOCK_CELLS_COUNT 65536
+#define MEM_BLOCK_CELLS_COUNT 65535
 
 
 typedef struct MEM_POOL MEM_POOL;
@@ -14,10 +14,10 @@ typedef struct MEM_POOL MEM_POOL;
 typedef struct MEM_BLOCK
 {
     MEM_POOL* pool;                 //пул в который входит блок
-    u16 cur_cell_index;             //текущий индекс записи
-    u16 cur_released_cell_index;    //текущий индекс записи индекса свободного блока
+    u16 cells_count;             //текущий индекс записи
+    u16 released_cells_count;       //количество ячеек помеченных освобожденными, прежде чем выдавать новую должно быть 0
     u16* released_cell_indexes;     //индексы свободных блоков (статический массив из MEM_BLOCK_CELLS_COUNT элементов)
-    void* cells;                    //ячейки блока
+    u8* cells;                    //ячейки блока
 
 } MEM_BLOCK;
 
@@ -38,3 +38,5 @@ MEM_BLOCK* mph_get_block_by_cell(void* cell, size_t size);
 MEM_POOL* mem_pool_handler_get_pools();
 // void* mph_get_new_cell(MEM_POOL* pool);
 MEM_POOL* mem_pool_handler_get_pool(size_t cell_size);
+
+void check_(MEM_POOL* pool);

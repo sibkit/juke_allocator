@@ -9,8 +9,8 @@
 void mem_block_handler_print_block(MEM_BLOCK* block)
 {
     printf("        block (0x%x)\n",block);
-    printf("            block r_ci   = %hu\n",block->cur_released_cell_index);
-    printf("            block ci   = %hu\n",block->cur_cell_index);
+    printf("            block r_ci   = %hu\n",block->released_cells_count);
+    printf("            block ci   = %hu\n",block->cells_count);
 }
 
 void print_pool(MEM_POOL* pool)

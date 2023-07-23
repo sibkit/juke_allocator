@@ -1,10 +1,11 @@
 use std::thread::current;
 use crate::tree_node::{NodeId, Tree, TreeNode};
-
+/*
 pub struct TreeIteratorRef<'a, T> {
 	tree: &'a Tree<T>,
 	cur_index: usize,
-	ids: Option<&'a Vec<NodeId>>
+	ids: Option<&'a Vec<NodeId>>,
+	phantom_data: T
 }
 
 impl<'a, T> TreeIteratorRef<'a, T> {
@@ -44,13 +45,14 @@ impl<'a, T> Iterator for TreeIteratorRef<'a, T> {
 			if self.cur_index >= ids.len()-1 {
 				return None;
 			}
+			self.cur_index+=1;
 			Some(self.tree.nodes_by_id.get(node_id).unwrap())
 		};
-		self.cur_index+=1;
+		
 		result
 		//let cur_node_id = self.parent.child_ids.get(self.cur_index).unwrap();
 		//let cur_item = unsafe {&*cur_node_id.unwrap()};
 		//self.cur_index+=1;
 		//Some(cur_item)
 	}
-}
+}*/

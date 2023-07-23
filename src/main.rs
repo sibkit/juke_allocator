@@ -9,6 +9,7 @@ mod tree_node;
 
 #[global_allocator]
 static ALLOCATOR: JukeGlobalAllocator = JukeGlobalAllocator::new();
+
 //static ALLOCATOR: System = System;
 //static GLOBAL: Jemalloc = Jemalloc;
 
@@ -33,19 +34,40 @@ fn test_mem() {
    println!("result: {}", result.len());
 }
 
+fn test_strings() {
+   let start = SystemTime::now();
+   
+      let mut vec = vec![];
+      for i in 0..20_000_000 {
+         vec.push(i.to_string());
+      }
+   
+   let end = SystemTime::now();
+   println!("TEST STRINGS COMPLETE");
+   println!("time: {}", end.duration_since(start).unwrap().as_millis());
+   
+
+   
+}
 
 fn main() {
    //ALLOCATOR.init();
    //print_mem();
    //test_addresses();
+   
    ALLOCATOR.init();
    ALLOCATOR.test();
    
+   //test_strings();
+   
+   
    let start = SystemTime::now();
    test_tree();
-   println!("TEST TREE COMPLETE");
+   
    let end = SystemTime::now();
+   println!("TEST TREE COMPLETE");
    println!("time: {}", end.duration_since(start).unwrap().as_millis());
+   
    
    //let s: std::alloc::GlobalAlloc;
    /*
@@ -71,15 +93,17 @@ fn test_tree() {
    let root_id = tree.add_node("0".to_string(), None);
    for i in 0..10 {
       println!("put i = {}", i);
-      let i_id = tree.add_node(format!("i -/. {} - {}", 0, i), Some(root_id));
+      let i_id = tree.add_node(format!("i - {} - {}", 0, i), Some(root_id));
       for j in 0..1_000 {
          let j_id = tree.add_node(format!("  j - {} - {}", 1, j), Some(i_id));
          for k in 0..1_000 {
-            tree.add_node(format!("    k - {} - {}", 2, k), Some(j_id));
+            tree.add_node(format!("    {} - {} - {}", k, j, i), Some(j_id));
          }
-        // println!("{}",tree.nodes_by_id.get(&j_id).unwrap().value);
       }
    }
+   
+   
+   
    println!("FILL COMPLETE");
    /*
    for node in tree.iter_ref(Some(root_id)) {

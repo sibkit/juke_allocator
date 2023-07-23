@@ -1,18 +1,23 @@
-use std::collections::HashMap;
-use crate::tree_iterators::TreeIteratorRef;
+use std::collections::HashMap as AHashMap;
+use std::fmt::Display;
+use std::marker::PhantomData;
+//use ahash::AHashMap;
 
-pub type NodeId = *const u8;
+
+pub type NodeId = *mut u8;
 
 pub struct TreeNode<T> {
 	pub value: T,
-	parent_id: Option<NodeId>
+	parent_id: Option<NodeId>,
+	child_ids: Vec<NodeId>
 }
 
 impl<T> TreeNode<T> {
 	pub fn new(value: T, parent_id: Option<NodeId>) -> Self {
 		TreeNode::<T> {
 			value,
-			parent_id
+			parent_id,
+			child_ids: vec![]
 		}
 	}
 	pub fn get_id(&self) -> NodeId{
@@ -21,45 +26,55 @@ impl<T> TreeNode<T> {
 }
 
 pub struct Tree<T> {
-	pub(crate) nodes_by_id: HashMap<NodeId,Box<TreeNode<T>>>,
-	pub(crate) ids_by_parent_id: HashMap<NodeId, Vec<NodeId>>,
-	pub(crate) root_ids: Vec<NodeId>
+	//pub(crate) nodes_by_id: AHashMap<NodeId,TreeNode<T>>,
+	//pub(crate) ids_by_parent_id: AHashMap<NodeId, Vec<NodeId>>,
+	pub(crate) root_ids: Vec<NodeId>,
+	phantom_data: PhantomData<T>
 }
 
-impl<T> Tree<T> {
+impl<T> Tree<T> where T:Display {
 	pub fn new() -> Self {
 		Tree {
-			nodes_by_id: HashMap::new(),
-			ids_by_parent_id: HashMap::new(),
 			root_ids: vec![],
+			phantom_data: Default::default(),
 		}
 	}
 	
 	#[inline]
 	pub fn add_node(&mut self, value: T, parent_id: Option<NodeId>) -> NodeId {
-		let node = Box::new(TreeNode::new(value, parent_id));
-		//self.add_boxed_node(node)
-		let node_id;
-		unsafe {
-			let node_ref = node.as_ref();
-			let ptr = node_ref as *const TreeNode<T>;
-			node_id = ptr as NodeId;
-		}
+		let mut node = Box::new(TreeNode::new(value, parent_id));
 		
-		if node.parent_id == None {
+
+		
+
+		
+		let val = node.value.to_string();
+		let node_id = Box::<TreeNode<T>>::into_raw(node) as NodeId;
+		
+		if parent_id == None {
 			self.root_ids.push(node_id);
+			//println!("node: {:p}, val: {} - parent: {:p}", node_id, val, &parent_id.unwrap_or(0 as NodeId));
 		}
 		else {
-			let parent_id = node.parent_id.unwrap();
-			let mut vec_opt = self.ids_by_parent_id.get_mut(&parent_id);
-			if vec_opt == None {
-				self.ids_by_parent_id.insert(parent_id,vec![node_id]);
+
+			unsafe {
+				let mut pid_u = parent_id.unwrap();
+				let mut parent = Box::<TreeNode<T>>::from_raw(pid_u as *mut TreeNode<T>);
+				//println!("parent: {:p}, val: {} - node: {:p}, val: {}", pid_u, &parent.value, node_id, val);
+				//let mut parent = &mut *(parent_id.unwrap() as *mut Box<TreeNode<T>>);
+				//println!("node: {:p} - parent: {:p}", node_id, parent);
+				parent.child_ids.push(node_id);
+				Box::<TreeNode<T>>::into_raw(parent);
 			}
-			else {
-				vec_opt.unwrap().push(node_id);
-			}
+			//let mut vec_opt = self.ids_by_parent_id.get_mut(&parent_id);
+			//if vec_opt == None {
+			//	self.ids_by_parent_id.insert(parent_id,vec![node_id]);
+			//}
+			//else {
+			//	vec_opt.unwrap().push(node_id);
+			//}
 		}
-		self.nodes_by_id.insert(node_id, node);
+		//self.nodes_by_id.insert(node_id, node);
 		node_id
 	}
 
@@ -68,14 +83,13 @@ impl<T> Tree<T> {
 	
 	}
 	
-	pub fn iter_ref(&self, parent_id: Option<NodeId>) -> TreeIteratorRef<T> {
-		TreeIteratorRef::new(self,parent_id)
-	}
+
 	
 	pub fn set_parent(&mut self, node_id: NodeId, parent_id: NodeId){}
 	
 	pub fn get_parent_node_id(&self, node_id: NodeId) -> Option<NodeId> {
-		let node = self.nodes_by_id.get(&node_id).unwrap();
-		node.parent_id
+		//let node = self.nodes_by_id.get(&node_id).unwrap();
+		//node.parent_id
+		None
 	}
 }

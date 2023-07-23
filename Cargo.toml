@@ -7,6 +7,8 @@ build = "build.rs"
 
 [dependencies]
 spin = "0.9.8"
+rand = "0.8.5"
+ahash = "0.8.3"
 
 [build-dependencies]
 cmake = "0.1"
