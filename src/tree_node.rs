@@ -60,9 +60,6 @@ impl<T> Tree<T> where T:Display {
 			unsafe {
 				let mut pid_u = parent_id.unwrap();
 				let mut parent = Box::<TreeNode<T>>::from_raw(pid_u as *mut TreeNode<T>);
-				//println!("parent: {:p}, val: {} - node: {:p}, val: {}", pid_u, &parent.value, node_id, val);
-				//let mut parent = &mut *(parent_id.unwrap() as *mut Box<TreeNode<T>>);
-				//println!("node: {:p} - parent: {:p}", node_id, parent);
 				parent.child_ids.push(node_id);
 				Box::<TreeNode<T>>::into_raw(parent);
 			}

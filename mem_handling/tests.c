@@ -42,7 +42,6 @@ void test_fill_and_clear_pool_reverse() {
 }
 
 void test_fill_and_clear_pool() {
-
     printf("TEST clear_pool................");
     bool test_ok = true;
     MEM_POOL* pool = mem_pool_handler_get_pool(16);
@@ -100,12 +99,10 @@ void test_write_read() {
 
     u32 bc = pool->blocks_count;
 
-
-
     int cells_count = 4 * MEM_BLOCK_CELLS_COUNT;
-    u32** arr = malloc(32*cells_count);
+    u32** arr = (u32**)malloc(32*cells_count);
     for(i32 i=0;i<cells_count;i++) {
-        *(arr+i) = (u8*) mh_malloc(32);
+        *(arr+i) = (u32*) mh_malloc(32);
         **(arr+i) = i;
     }
 
@@ -113,10 +110,8 @@ void test_write_read() {
         if((**(arr+i)) != i) {
             test_ok = false;
         }
-        mh_free(*(arr+i) , 32);
+        mh_free((u8*)*(arr+i) , 32);
     }
-
-
 
     if (test_ok)
         printf("OK\n");

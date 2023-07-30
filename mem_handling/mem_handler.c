@@ -5,11 +5,12 @@
 #include <stdbool.h>
 #include "mem_pool_handler.h"
 
-#define MAX_CELL_SIZE 255
 
 void init() {
     setbuf(stdout, NULL);
 }
+
+
 
 u8* mh_malloc(size_t size) {
     u8 *result = mph_get_new_cell(size);
@@ -21,27 +22,18 @@ u8* mh_malloc(size_t size) {
 
 void mh_free(u8* cell, size_t size)
 {
+    //printf("mh_free %i\n", size);
     MEM_BLOCK* block = mph_get_block_by_cell(cell, size);
-    MEM_POOL* pool = block->pool;
     if(block!=NULL) {
-        check_(pool);
 
-
-
-        /*
-         Проверяем имеет ли текущий индекс записи индекс освобождаемой ячейки, если да - уменьшаем значение индекса записи на 1;
-         Если нет, добавляем индекс свободной ячейки в released_cell_indexes
-         Если released_cells_count ==cells_count-1 (освобожденных ячеек столько же, сколько всего) удаляем MEM_BLOCK
-         */
-
+         //Проверяем имеет ли текущий индекс записи индекс освобождаемой ячейки, если да - уменьшаем значение индекса записи на 1;
+         //Если нет, добавляем индекс свободной ячейки в released_cell_indexes
+         //Если released_cells_count ==cells_count-1 (освобожденных ячеек столько же, сколько всего) удаляем MEM_BLOCK
 
         if (block->cells_count -1 == block->released_cells_count) {
             mem_block_handler_delete_block(block);
             return;
         }
-
-
-
         u16 cell_index = (cell - (u8 *) block->cells) / size;
 
         if((cell - (u8 *) block->cells) % size != 0) {
@@ -64,9 +56,8 @@ void mh_free(u8* cell, size_t size)
             block->released_cells_count++;
             block->pool->released_cells_count++;
         }
-        check_(pool);
     }
     else
-        printf("ERROR: mh_free (block not found)\n");
+        printf("ERROR: mh_free (block not found), size = %i\n", size);
 }
 

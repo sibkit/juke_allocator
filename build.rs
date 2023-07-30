@@ -1,4 +1,4 @@
-
+use cmake;
 
 fn main() {
 	let dst = cmake::build("mem_handling");

@@ -1,17 +1,25 @@
 use std::alloc::System;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::SystemTime;
-use crate::juke_allocator::{JukeGlobalAllocator, print_mem};
+use crate::juke_allocator::JukeGlobalAllocator;
 use crate::tree_node::Tree;
+use crate::stat_writer::{MemWriter, StatWriter};
 
 mod juke_allocator;
 mod tree_iterators;
 mod tree_node;
+mod stat_writer;
+mod heap_array;
+mod easy_vec;
+mod jukealloc;
 
 #[global_allocator]
 static ALLOCATOR: JukeGlobalAllocator = JukeGlobalAllocator::new();
 
 //static ALLOCATOR: System = System;
 //static GLOBAL: Jemalloc = Jemalloc;
+static WRITER: StatWriter = StatWriter{ mem_writer: Mutex::new(MemWriter{map:None, is_initialized: false})};
 
 
 fn test_pointer() {
@@ -51,15 +59,19 @@ fn test_strings() {
 }
 
 fn main() {
-   //ALLOCATOR.init();
+   
+   ALLOCATOR.init_c_out();
+   //ALLOCATOR.test();
    //print_mem();
    //test_addresses();
-   
-   ALLOCATOR.init();
-   ALLOCATOR.test();
-   
+  // println!("main");
+   //return;
+
    //test_strings();
+   //ALLOCATOR.simple_allocator.lock().init_statistic();
    
+   WRITER.init();
+   ALLOCATOR.simple_allocator.lock().init();
    
    let start = SystemTime::now();
    test_tree();
@@ -67,6 +79,8 @@ fn main() {
    let end = SystemTime::now();
    println!("TEST TREE COMPLETE");
    println!("time: {}", end.duration_since(start).unwrap().as_millis());
+
+   WRITER.print();
    
    
    //let s: std::alloc::GlobalAlloc;
@@ -91,15 +105,20 @@ fn test_tree() {
    let mut tree = Tree::<String>::new();
    
    let root_id = tree.add_node("0".to_string(), None);
-   for i in 0..10 {
-      println!("put i = {}", i);
-      let i_id = tree.add_node(format!("i - {} - {}", 0, i), Some(root_id));
-      for j in 0..1_000 {
-         let j_id = tree.add_node(format!("  j - {} - {}", 1, j), Some(i_id));
-         for k in 0..1_000 {
-            tree.add_node(format!("    {} - {} - {}", k, j, i), Some(j_id));
+   for i in 0..60 {
+      
+      print!("put i = {}; ", i);
+      let start = SystemTime::now();
+     // test_tree();
+      let i_id = tree.add_node(format!("{}",i), Some(root_id));
+      for j in 0..1_0000 {
+         let j_id = tree.add_node(format!("{} - {}",i,j), Some(i_id));
+         for k in 0..1_00 {
+            tree.add_node(format!("{} - {} - {}",i,j,k), Some(j_id));
          }
       }
+      let end = SystemTime::now();
+      println!("time: {}", end.duration_since(start).unwrap().as_millis());
    }
    
    
@@ -117,3 +136,4 @@ fn test_tree() {
    }
    */
 }
+
